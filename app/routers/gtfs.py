@@ -6,6 +6,8 @@ from app.dependencies import get_db
 from app.services import import_service, gtfs_parser
 import zipfile
 from app.core.config import settings
+from app.models.route import Route as RouteModel
+from app.schemas.route import RouteOut
 
 router = APIRouter()
 
@@ -52,3 +54,8 @@ async def download_snapshot(snapshot_id: int, db: Session = Depends(get_db)):
         media_type="application/zip", # Postman'e bu bir ZIP dosyası
         headers={"Content-Disposition": f"attachment; filename=snapshot_{snapshot_id}.zip"}
     )
+
+@router.get("/routes", response_model=list[RouteOut])
+async def get_routes(snapshot_id: int, db: Session = Depends(get_db)):
+    routes = db.query(RouteModel).filter(RouteModel.snapshot_id == snapshot_id).all()
+    return routes
