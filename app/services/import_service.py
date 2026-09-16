@@ -8,6 +8,8 @@ from app.models.route import Route as RouteModel
 from app.schemas.route import Route as RouteSchema
 from app.models.stop import Stop as StopModel
 from app.schemas.stop import Stop as StopSchema
+from app.models.trip import Trip as TripModel
+from app.schemas.trip import Trip as TripSchema
 
 BUCKET_NAME = settings.minio_bucket_name
 
@@ -39,7 +41,10 @@ def upload_zip_to_minio(zip_file: UploadFile, snapshot: Snapshot):
         content_type="application/zip"
     )
 
-def save_routes(db: Session, snapshot_id: int, valid_routes: list[RouteSchema]) -> None:
+# DB kaydetme servisleri gibi burası
+
+def save_routes(db: Session, snapshot_id: int, valid_routes: list[RouteSchema]) -> dict:
+    route_id_map = {}
     for route in valid_routes:
         db_route = RouteModel(
             snapshot_id=snapshot_id,
@@ -50,7 +55,10 @@ def save_routes(db: Session, snapshot_id: int, valid_routes: list[RouteSchema]) 
             route_type=route.route_type
         )
         db.add(db_route)
+        db.flush()  # henüz commit değil, ama db_route.id'yi şimdiden almamızı sağlar
+        route_id_map[route.route_id] = db_route.id
     db.commit()
+    return route_id_map
 
 def save_stops(db: Session, snapshot_id: int, valid_stops: list[StopSchema]) -> None:
     for stop in valid_stops:
@@ -64,4 +72,18 @@ def save_stops(db: Session, snapshot_id: int, valid_stops: list[StopSchema]) -> 
             location_type=stop.location_type
         )
         db.add(db_stop)
+    db.commit()
+
+def save_trips(db: Session, snapshot_id: int, valid_trips: list[TripSchema], route_id_map: dict) -> None:
+    for trip in valid_trips:
+        db_trip = TripModel(
+            snapshot_id=snapshot_id,
+            route_id=route_id_map[trip.route_id], # Foreign key unique olamadığından id ile buluyoruz
+            service_id=trip.service_id,
+            trip_id=trip.trip_id,
+            trip_headsign=trip.trip_headsign,
+            direction_id=trip.direction_id,
+            shape_id=trip.shape_id
+        )
+        db.add(db_trip)
     db.commit()

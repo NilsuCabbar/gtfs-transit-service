@@ -21,16 +21,18 @@ async def import_gtfs(
     import_service.upload_zip_to_minio(zip_file, snapshot)
 
     # Schema ile onaylama
-    valid_routes, invalid_routes, valid_stops, invalid_stops = gtfs_parser.process_zip(zip_file)
+    valid_routes, invalid_routes, valid_stops, invalid_stops, valid_trips, invalid_trips = gtfs_parser.process_zip(zip_file)
 
     # DB kaydetme 
-    import_service.save_routes(db, snapshot.id, valid_routes)
+    route_id_map = import_service.save_routes(db, snapshot.id, valid_routes)
     import_service.save_stops(db, snapshot.id, valid_stops)
+    import_service.save_trips(db, snapshot.id, valid_trips, route_id_map)
 
     
     return {
         "snapshot_id": snapshot.id,
         "status": "uploaded",
         "routes": {"valid": len(valid_routes), "invalid": len(invalid_routes)},
-        "stops": {"valid": len(valid_stops), "invalid": len(invalid_stops)}
+        "stops": {"valid": len(valid_stops), "invalid": len(invalid_stops)},
+        "trips": {"valid": len(valid_trips), "invalid": len(invalid_trips)}
     }

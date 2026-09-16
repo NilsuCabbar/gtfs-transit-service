@@ -5,6 +5,7 @@ import csv
 import io
 from app.schemas.route import Route
 from app.schemas.stop import Stop
+from app.schemas.trip import Trip
 from pydantic import ValidationError
 
 
@@ -14,6 +15,8 @@ def process_zip(zip_file: UploadFile):
     invalid_routes = []
     valid_stops = []
     invalid_stops = []
+    valid_trips = []
+    invalid_trips = []
 
     with zipfile.ZipFile(zip_file.file) as z:
 
@@ -21,9 +24,11 @@ def process_zip(zip_file: UploadFile):
        valid_routes, invalid_routes = parse_csv_from_zip(z, "routes.txt", Route)
        # STOPS doğrulama
        valid_stops, invalid_stops = parse_csv_from_zip(z, "stops.txt", Stop)
+       # TRIPS doğrulama
+       valid_trips, invalid_trips = parse_csv_from_zip(z, "trips.txt", Trip)       
            
 
-    return valid_routes, invalid_routes, valid_stops, invalid_stops
+    return valid_routes, invalid_routes, valid_stops, invalid_stops, valid_trips, invalid_trips
 
 def parse_csv_from_zip(z: zipfile.ZipFile, filename: str, schema_class):
     valid = []
