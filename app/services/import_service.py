@@ -10,6 +10,8 @@ from app.models.stop import Stop as StopModel
 from app.schemas.stop import Stop as StopSchema
 from app.models.trip import Trip as TripModel
 from app.schemas.trip import Trip as TripSchema
+from app.models.stop_time import StopTime as StopTimeModel
+from app.schemas.stop_time import StopTime as StopTimeSchema
 
 BUCKET_NAME = settings.minio_bucket_name
 
@@ -60,7 +62,8 @@ def save_routes(db: Session, snapshot_id: int, valid_routes: list[RouteSchema]) 
     db.commit()
     return route_id_map
 
-def save_stops(db: Session, snapshot_id: int, valid_stops: list[StopSchema]) -> None:
+def save_stops(db: Session, snapshot_id: int, valid_stops: list[StopSchema]) -> dict:
+    stop_id_map = {}
     for stop in valid_stops:
         db_stop = StopModel(
             snapshot_id=snapshot_id,
@@ -72,9 +75,13 @@ def save_stops(db: Session, snapshot_id: int, valid_stops: list[StopSchema]) -> 
             location_type=stop.location_type
         )
         db.add(db_stop)
+        db.flush()
+        stop_id_map[stop.stop_id] = db_stop.id
     db.commit()
+    return stop_id_map
 
-def save_trips(db: Session, snapshot_id: int, valid_trips: list[TripSchema], route_id_map: dict) -> None:
+def save_trips(db: Session, snapshot_id: int, valid_trips: list[TripSchema], route_id_map: dict) -> dict:
+    trip_id_map = {}
     for trip in valid_trips:
         db_trip = TripModel(
             snapshot_id=snapshot_id,
@@ -86,4 +93,23 @@ def save_trips(db: Session, snapshot_id: int, valid_trips: list[TripSchema], rou
             shape_id=trip.shape_id
         )
         db.add(db_trip)
+        db.flush()
+        trip_id_map[trip.trip_id] = db_trip.id
+    db.commit()
+    return trip_id_map
+
+def save_stop_times(db: Session, snapshot_id: int, valid_stop_times: list[StopTimeSchema], trip_id_map: dict, stop_id_map: dict) -> None:
+    for stop_time in valid_stop_times:
+        db_stoptime = StopTimeModel(
+            snapshot_id=snapshot_id,
+            trip_id=trip_id_map[stop_time.trip_id],
+            arrival_time=stop_time.arrival_time,
+            departure_time=stop_time.departure_time,
+            stop_id=stop_id_map[stop_time.stop_id],
+            stop_sequence=stop_time.stop_sequence,
+            pickup_type=stop_time.pickup_type,
+            drop_off_type=stop_time.drop_off_type,
+            shape_dist_traveled=stop_time.shape_dist_traveled
+        )
+        db.add(db_stoptime)
     db.commit()
