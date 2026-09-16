@@ -4,25 +4,39 @@ from sqlalchemy.orm import Session
 import csv
 import io
 from app.schemas.route import Route
+from app.schemas.stop import Stop
 from pydantic import ValidationError
 
 
 def process_zip(zip_file: UploadFile):
     zip_file.file.seek(0) # MinIO'ya yüklerken stream yüketiliyor imleci başa al
     valid_routes = []
-    invalid_rows = []
+    invalid_routes = []
+    valid_stops = []
+    invalid_stops = []
 
     with zipfile.ZipFile(zip_file.file) as z:
-        print(z.namelist())
 
-        with z.open("routes.txt") as f:
-            text_file = io.TextIOWrapper(f, encoding="utf-8")
-            reader = csv.DictReader(text_file)
-            for row in reader:
-                try:
-                    route = Route(**row)
-                    valid_routes.append(route)
-                except ValidationError as e:
-                    invalid_rows.append({"row": row, "error": str(e)})
+       # ROUTES doğrulama
+       valid_routes, invalid_routes = parse_csv_from_zip(z, "routes.txt", Route)
+       # STOPS doğrulama
+       valid_stops, invalid_stops = parse_csv_from_zip(z, "stops.txt", Stop)
+           
 
-    return valid_routes, invalid_rows
+    return valid_routes, invalid_routes, valid_stops, invalid_stops
+
+def parse_csv_from_zip(z: zipfile.ZipFile, filename: str, schema_class):
+    valid = []
+    invalid = []
+
+    with z.open(filename) as f:
+      text_file = io.TextIOWrapper(f, encoding="utf-8")
+      reader = csv.DictReader(text_file)
+      for row in reader:
+          try:
+              item = schema_class(**row)
+              valid.append(item)
+          except ValidationError as e:
+              invalid.append({"row": row, "error": str(e)})
+
+    return valid, invalid

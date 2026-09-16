@@ -6,6 +6,8 @@ from app.models.dataset import Dataset
 from app.models.snapshot import Snapshot
 from app.models.route import Route as RouteModel
 from app.schemas.route import Route as RouteSchema
+from app.models.stop import Stop as StopModel
+from app.schemas.stop import Stop as StopSchema
 
 BUCKET_NAME = settings.minio_bucket_name
 
@@ -48,4 +50,18 @@ def save_routes(db: Session, snapshot_id: int, valid_routes: list[RouteSchema]) 
             route_type=route.route_type
         )
         db.add(db_route)
+    db.commit()
+
+def save_stops(db: Session, snapshot_id: int, valid_stops: list[StopSchema]) -> None:
+    for stop in valid_stops:
+        db_stop = StopModel(
+            snapshot_id=snapshot_id,
+            stop_id=stop.stop_id,
+            stop_name=stop.stop_name,
+            stop_lat=stop.stop_lat,
+            stop_lon=stop.stop_lon,
+            wheelchair_boarding=stop.wheelchair_boarding,
+            location_type=stop.location_type
+        )
+        db.add(db_stop)
     db.commit()
