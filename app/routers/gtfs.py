@@ -1,8 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from app.core.minio_client import minio_client
 from app.dependencies import get_db
 from app.services import import_service, gtfs_parser
 import zipfile
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -37,4 +40,15 @@ async def import_gtfs(
         "stops": {"valid": len(valid_stops), "invalid": len(invalid_stops)},
         "trips": {"valid": len(valid_trips), "invalid": len(invalid_trips)},
         "stop_times": {"valid": len(valid_stop_times), "invalid": len(invalid_stop_times)}
-    }
+    }   
+
+@router.get("/snapshots/{snapshot_id}/download")
+async def download_snapshot(snapshot_id: int, db: Session = Depends(get_db)):
+    snapshot = import_service.get_snapshot(db, snapshot_id)
+    response = minio_client.get_object(settings.minio_bucket_name, snapshot.minio_object_path)
+
+    return StreamingResponse( # Belelğe almadan doğrudan HTTP cevabı olarak göndermeyi sağlıyor.
+        response,
+        media_type="application/zip", # Postman'e bu bir ZIP dosyası
+        headers={"Content-Disposition": f"attachment; filename=snapshot_{snapshot_id}.zip"}
+    )

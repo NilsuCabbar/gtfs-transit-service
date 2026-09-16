@@ -1,4 +1,4 @@
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from app.core.minio_client import minio_client
 from app.core.config import settings
@@ -113,3 +113,9 @@ def save_stop_times(db: Session, snapshot_id: int, valid_stop_times: list[StopTi
         )
         db.add(db_stoptime)
     db.commit()
+
+def get_snapshot(db: Session, snapshot_id: int) -> Snapshot:
+    snapshot = db.query(Snapshot).filter(Snapshot.id == snapshot_id).first()
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="Snapshot is not found") # Mimari açıdan temiz değilmiş ama pratik ve yeterli şu an kullanmak için
+    return snapshot
