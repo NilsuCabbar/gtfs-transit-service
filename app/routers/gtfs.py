@@ -7,7 +7,11 @@ from app.services import import_service, gtfs_parser
 import zipfile
 from app.core.config import settings
 from app.models.route import Route as RouteModel
+from app.models.stop import Stop as StopModel
+from app.models.trip import Trip as TripModel
 from app.schemas.route import RouteOut
+from app.schemas.stop import StopOut
+from app.schemas.trip import TripOut
 
 router = APIRouter()
 
@@ -59,3 +63,13 @@ async def download_snapshot(snapshot_id: int, db: Session = Depends(get_db)):
 async def get_routes(snapshot_id: int, db: Session = Depends(get_db)):
     routes = db.query(RouteModel).filter(RouteModel.snapshot_id == snapshot_id).all()
     return routes
+
+@router.get("/stops", response_model=list[StopOut])
+async def get_stops(snapshot_id: int, db: Session = Depends(get_db)):
+    stops = db.query(StopModel).filter(StopModel.snapshot_id == snapshot_id).all()
+    return stops
+
+@router.get("/trips", response_model=list[TripOut])
+async def get_trips(snapshot_id: int, db: Session = Depends(get_db)):
+    trips = db.query(TripModel).filter(TripModel.snapshot_id == snapshot_id).all()
+    return trips
